@@ -1,0 +1,6 @@
+database: "postgres://username:password@host:port/dbname
+server:
+  host: "127.0.0.1" # default
+  port: 8080        # default
+  read_timeout: 5s  # default
+  idle_timeout: 60s # default

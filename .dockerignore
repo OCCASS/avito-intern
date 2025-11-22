@@ -1,0 +1,9 @@
+.git/
+.gitignore
+
+.DS_Store
+
+.env*
+
+*.example
+config/local.yml.example
