@@ -26,8 +26,9 @@ func NewStatus(value string) (Status, error) {
 }
 
 type PullRequest struct {
-	Id     string
-	Name   string
-	Author User
-	Status Status
+	Id          string   `json:"pull_request_id"`
+	Name        string   `json:"pull_request_name"`
+	AuthorId    string   `json:"author_id"`
+	Status      Status   `json:"status"`
+	ReviewersId []string `json:"assigned_reviewers"`
 }

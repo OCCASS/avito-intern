@@ -1,7 +1,7 @@
 package entity
 
 type User struct {
-	Id       string
-	Name     string
-	IsActive bool
+	Id       string `json:"user_id"`
+	Name     string `json:"username"`
+	IsActive bool   `json:"is_active"`
 }
