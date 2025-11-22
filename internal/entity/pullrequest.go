@@ -26,7 +26,7 @@ func NewStatus(value string) (Status, error) {
 }
 
 type PullRequest struct {
-	Id     int
+	Id     string
 	Name   string
 	Author User
 	Status Status
