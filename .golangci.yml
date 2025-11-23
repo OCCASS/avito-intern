@@ -3,9 +3,6 @@ version: 2
 run:
   timeout: 2m
   tests: true
-  skip-dirs:
-    - config
-    - sql
 
 linters:
   enable:
@@ -28,3 +25,6 @@ linters-settings:
 
 issues:
   exclude-use-default: false
+  exclude-dirs:
+    - config
+    - sql
