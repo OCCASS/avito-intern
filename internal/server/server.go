@@ -7,21 +7,25 @@ import (
 	"os/signal"
 
 	"github.com/OCCASS/avito-intern/internal/infrastructure/pullrequest"
+	"github.com/OCCASS/avito-intern/internal/infrastructure/team"
 	"github.com/gofiber/fiber/v2"
 )
 
 type Server struct {
 	app                 *fiber.App
 	pullRequestHandlers *pullrequest.PullRequestHandlers
+	teamHandlers        *team.TeamHandlers
 }
 
 func NewServer(
 	app *fiber.App,
 	prh *pullrequest.PullRequestHandlers,
+	th *team.TeamHandlers,
 ) *Server {
 	return &Server{
 		app:                 app,
 		pullRequestHandlers: prh,
+		teamHandlers:        th,
 	}
 }
 
@@ -30,6 +34,10 @@ func (s Server) SetupHandlers() {
 	pullrequest.Post("/create", s.pullRequestHandlers.Create)
 	pullrequest.Post("/merge", s.pullRequestHandlers.Merge)
 	pullrequest.Post("/reassign", s.pullRequestHandlers.Reasign)
+
+	team := s.app.Group("/team")
+	team.Post("/add", s.teamHandlers.Add)
+	team.Get("/get", s.teamHandlers.Get)
 }
 
 func (s *Server) MustStart(address string) {
