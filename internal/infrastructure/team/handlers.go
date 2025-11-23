@@ -45,7 +45,7 @@ func (h TeamHandlers) handleAddError(c *fiber.Ctx, err error) error {
 func (h TeamHandlers) Get(c *fiber.Ctx) error {
 	query := new(teamDto.GetTeamQuery)
 
-	if err := c.QueryParser(&query); err != nil {
+	if err := c.QueryParser(query); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(errorDto.NewErrorResponse("QUERY_NOT_SET", "query params not set"))
 	}
 
