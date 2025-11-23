@@ -10,3 +10,6 @@ run:
 
 prod_run:
 	$(APP_OUTPUT) -c $(CONFIG_FILE)
+
+lint:
+	golangci-lint run

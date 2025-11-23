@@ -1,0 +1,30 @@
+version: 2
+
+run:
+  timeout: 2m
+  tests: true
+  skip-dirs:
+    - config
+    - sql
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - ineffassign
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+
+  errcheck:
+    check-type-assertions: true
+
+  revive:
+    severity: warning
+    rules:
+      - name: indent-error-flow
+
+issues:
+  exclude-use-default: false
