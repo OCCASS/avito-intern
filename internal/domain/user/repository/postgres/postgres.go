@@ -29,7 +29,9 @@ func (r UserPostgresRepository) CreateMany(users []entity.User) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	query := `INSERT INTO "user"(id, name, is_active) VALUES `
 	vals := []interface{}{}

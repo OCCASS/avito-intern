@@ -35,7 +35,9 @@ func (r PullRequestPostgresRepository) Create(pr entity.PullRequest) (entity.Pul
 	if err != nil {
 		return entity.PullRequest{}, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	queryPr := `INSERT INTO pullrequest(id, name, author_id, status, created_at)
 	VALUES ($1, $2, $3, $4, now())
@@ -78,7 +80,9 @@ func (r PullRequestPostgresRepository) Merge(id string) (entity.PullRequest, err
 	if err != nil {
 		return entity.PullRequest{}, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	queryMerge := `UPDATE pullrequest SET status=$1, merged_at=now() WHERE id=$2`
 	if _, err := r.db.Conn.Exec(queryMerge, entity.StatusMerged, id); err != nil {
@@ -122,7 +126,9 @@ func (r PullRequestPostgresRepository) Reassign(pullRequestId, oldReviewer, newR
 	if err != nil {
 		return entity.PullRequest{}, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	queryUpdateReviewer := `UPDATE pullrequest_reviewer SET reviewer_id=$1 WHERE pullrequest_id=$2 AND reviewer_id=$3`
 	if _, err := tx.Exec(queryUpdateReviewer, newReviewer, pullRequestId, oldReviewer); err != nil {
