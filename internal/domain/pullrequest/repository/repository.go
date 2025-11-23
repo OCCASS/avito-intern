@@ -7,4 +7,5 @@ type PullRequestRepository interface {
 	Merge(string) (entity.PullRequest, error)
 	Reassign(pullRequestId, oldReviewer, newReviewer string) (entity.PullRequest, error)
 	Get(string) (entity.PullRequest, error)
+	GetByReviewer(string) ([]entity.SmallPullRequest, error)
 }

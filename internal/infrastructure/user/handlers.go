@@ -52,4 +52,23 @@ func (h UserHandlers) handleSetIsActiveError(c *fiber.Ctx, err error) error {
 	}
 }
 
-func (h UserHandlers) GetReview(c *fiber.Ctx) error { return nil }
+func (h UserHandlers) GetReview(c *fiber.Ctx) error {
+	query := new(userDto.GetReviewQuery)
+
+	if err := c.QueryParser(query); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errorDto.NewErrorResponse("QUERY_NOT_SET", "query params not set"))
+	}
+
+	prs, err := h.services.GetUserPullRequestsWhereReview(query.UserId)
+	if err != nil {
+		return h.handleGetReviewError(c, err)
+	}
+	return c.JSON(userDto.GetReviewResponse{UserId: query.UserId, PullRequests: prs})
+}
+
+func (h UserHandlers) handleGetReviewError(c *fiber.Ctx, err error) error {
+	switch err {
+	default:
+		return c.Status(fiber.StatusInternalServerError).JSON(errorDto.NewErrorResponse("SERVER_ERROR", "an internal error occurred"))
+	}
+}
