@@ -9,10 +9,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/OCCASS/avito-intern/internal/domain/pullrequest"
-	prPosgres "github.com/OCCASS/avito-intern/internal/domain/pullrequest/repository/postgres"
-	teamPosgres "github.com/OCCASS/avito-intern/internal/domain/team/repository/postgres"
+	prPostgres "github.com/OCCASS/avito-intern/internal/domain/pullrequest/repository/postgres"
+	"github.com/OCCASS/avito-intern/internal/domain/team"
+	teamPostgres "github.com/OCCASS/avito-intern/internal/domain/team/repository/postgres"
+	userPostgres "github.com/OCCASS/avito-intern/internal/domain/user/repository/postgres"
 
 	prHandlers "github.com/OCCASS/avito-intern/internal/infrastructure/pullrequest"
+	tHandlers "github.com/OCCASS/avito-intern/internal/infrastructure/team"
 )
 
 func main() {
@@ -24,15 +27,21 @@ func main() {
 
 	db := database.MustConnect(cfg.Database)
 
-	pullRequestRepository := prPosgres.NewPullRequestPostgresRepository(db)
-	teamRepository := teamPosgres.NewTeamPostgresRepository(db)
+	// Repositories
+	pullRequestRepository := prPostgres.NewPullRequestPostgresRepository(db)
+	teamRepository := teamPostgres.NewTeamPostgresRepository(db)
+	userRepository := userPostgres.NewUserPostgresRepository(db)
 
-	pullRequestService := pullrequest.NewPullRequestServices(pullRequestRepository, teamRepository)
+	// Services
+	pullRequestServices := pullrequest.NewPullRequestServices(pullRequestRepository, teamRepository)
+	teamServices := team.NewTeamServices(teamRepository, userRepository)
 
-	pullRequestHandlers := prHandlers.NewPullRequestHandlers(pullRequestService)
+	// Handlers
+	pullRequestHandlers := prHandlers.NewPullRequestHandlers(pullRequestServices)
+	teamHandlers := tHandlers.NewTeamHandlers(teamServices)
 
 	app := fiber.New(*serverCfg)
-	httpServer := server.NewServer(app, pullRequestHandlers)
+	httpServer := server.NewServer(app, pullRequestHandlers, teamHandlers)
 	httpServer.SetupHandlers()
 	httpServer.MustStart(cfg.Server.Address())
 }
