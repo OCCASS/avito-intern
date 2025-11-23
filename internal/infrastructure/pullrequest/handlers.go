@@ -26,15 +26,33 @@ func (h PullRequestHandlers) Create(c *fiber.Ctx) error {
 		return err
 	}
 
-	return c.JSON(pr)
+	return c.Status(fiber.StatusCreated).JSON(pullrequestDto.CreatePullRequestResponse{Pr: pr})
 }
 
-/*
-func (h PullRequestHandler) Merge(c *fiber.Ctx) error {
+func (h PullRequestHandlers) Merge(c *fiber.Ctx) error {
+	payload := new(pullrequestDto.MergePullRequestDto)
 
+	if err := c.BodyParser(&payload); err != nil {
+		return err
+	}
+
+	pr, err := h.services.Merge(*payload)
+	if err != nil {
+		return err
+	}
+	return c.JSON(pullrequestDto.MergePullRequestResponse{Pr: pr, MergedAt: *pr.MergedAt})
 }
 
-func (h PullRequestHandler) Reasign(c *fiber.Ctx) error {
+func (h PullRequestHandlers) Reasign(c *fiber.Ctx) error {
+	payload := new(pullrequestDto.ReassignPullRequestDto)
 
+	if err := c.BodyParser(&payload); err != nil {
+		return err
+	}
+
+	pr, replacedBy, err := h.services.Reassign(*payload)
+	if err != nil {
+		return err
+	}
+	return c.JSON(pullrequestDto.ReassignPullRequestResponse{Pr: pr, ReplacedBy: replacedBy})
 }
-*/

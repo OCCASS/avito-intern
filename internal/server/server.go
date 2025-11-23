@@ -26,8 +26,10 @@ func NewServer(
 }
 
 func (s Server) SetupHandlers() {
-	pullrequest := s.app.Group("/pullrequest")
+	pullrequest := s.app.Group("/pullRequest")
 	pullrequest.Post("/create", s.pullRequestHandlers.Create)
+	pullrequest.Post("/merge", s.pullRequestHandlers.Merge)
+	pullrequest.Post("/reassign", s.pullRequestHandlers.Reasign)
 }
 
 func (s *Server) MustStart(address string) {

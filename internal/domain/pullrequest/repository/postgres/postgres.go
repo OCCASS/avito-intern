@@ -6,6 +6,16 @@ import (
 	"github.com/lib/pq"
 )
 
+type pullRequestRow struct {
+	Id           string         `db:"id"`
+	Name         string         `db:"name"`
+	AuthorId     string         `db:"author_id"`
+	Status       entity.Status  `db:"status"`
+	CreatedAt    string         `db:"created_at"`
+	MergedAt     *string        `db:"merged_at"`
+	ReviewersIds pq.StringArray `db:"reviewers"`
+}
+
 type PullRequestPostgresRepository struct {
 	db *database.Database
 }
@@ -14,7 +24,7 @@ func NewPullRequestPostgresRepository(db *database.Database) *PullRequestPostgre
 	return &PullRequestPostgresRepository{db}
 }
 
-func (r *PullRequestPostgresRepository) Create(pr entity.PullRequest) (entity.PullRequest, error) {
+func (r PullRequestPostgresRepository) Create(pr entity.PullRequest) (entity.PullRequest, error) {
 	var newPr entity.PullRequest
 
 	tx, err := r.db.Conn.Beginx()
@@ -45,19 +55,49 @@ func (r *PullRequestPostgresRepository) Create(pr entity.PullRequest) (entity.Pu
 	return newPr, nil
 }
 
-func (r *PullRequestPostgresRepository) Merge(pr entity.PullRequest) (entity.PullRequest, error) {
-	var newPr entity.PullRequest
+func (r PullRequestPostgresRepository) Merge(id string) (entity.PullRequest, error) {
+	var row pullRequestRow
 
-	queryMerge := `UPDATE pullrequest SET status=$1, merged_at=now() WHERE id=$2 RETURNING id, name, author_id, status`
-	if err := r.db.Conn.Get(&newPr, queryMerge, entity.StatusMerged, pr.Id); err != nil {
+	tx, err := r.db.Conn.Beginx()
+	if err != nil {
+		return entity.PullRequest{}, err
+	}
+	defer tx.Rollback()
+
+	queryMerge := `UPDATE pullrequest SET status=$1, merged_at=now() WHERE id=$2`
+	if _, err := r.db.Conn.Exec(queryMerge, entity.StatusMerged, id); err != nil {
 		return entity.PullRequest{}, err
 	}
 
-	return newPr, nil
+	queryPr := `SELECT
+		p.id, p.name, p.author_id, p.status, array_agg(prr.reviewer_id) as reviewers, p.created_at, p.merged_at
+	FROM pullrequest p
+	LEFT JOIN pullrequest_reviewer prr ON p.id = prr.pullrequest_id
+	WHERE id=$1
+	GROUP BY p.id`
+	if err := tx.Get(&row, queryPr, id); err != nil {
+		return entity.PullRequest{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return entity.PullRequest{}, err
+	}
+
+	pr := entity.PullRequest{
+		Id:           row.Id,
+		Name:         row.Name,
+		AuthorId:     row.AuthorId,
+		Status:       row.Status,
+		ReviewersIds: []string(row.ReviewersIds),
+		CreatedAt:    row.CreatedAt,
+		MergedAt:     row.MergedAt,
+	}
+
+	return pr, nil
 }
 
-func (r *PullRequestPostgresRepository) Reassign(pullRequestId, oldAuthor, newAuthor string) (entity.PullRequest, error) {
-	var newPr entity.PullRequest
+func (r PullRequestPostgresRepository) Reassign(pullRequestId, oldReviewer, newReviewer string) (entity.PullRequest, error) {
+	var row pullRequestRow
 
 	tx, err := r.db.Conn.Beginx()
 	if err != nil {
@@ -66,17 +106,17 @@ func (r *PullRequestPostgresRepository) Reassign(pullRequestId, oldAuthor, newAu
 	defer tx.Rollback()
 
 	queryUpdateReviewer := `UPDATE pullrequest_reviewer SET reviewer_id=$1 WHERE pullrequest_id=$2 AND reviewer_id=$3`
-	if _, err := tx.Exec(queryUpdateReviewer, newAuthor, pullRequestId, oldAuthor); err != nil {
+	if _, err := tx.Exec(queryUpdateReviewer, newReviewer, pullRequestId, oldReviewer); err != nil {
 		return entity.PullRequest{}, err
 	}
 
 	queryPr := `SELECT
-		p.id, p.name, p.author_id, p.status, array_agg(prr.reviewer_id) as reviewers
+		p.id, p.name, p.author_id, p.status, array_agg(prr.reviewer_id) as reviewers, p.created_at, p.merged_at
 	FROM pullrequest p
 	LEFT JOIN pullrequest_reviewer prr ON p.id = prr.pullrequest_id
 	WHERE id=$1
 	GROUP BY p.id`
-	if err := tx.Get(&newPr, queryPr, pullRequestId); err != nil {
+	if err := tx.Get(&row, queryPr, pullRequestId); err != nil {
 		return entity.PullRequest{}, err
 	}
 
@@ -84,5 +124,40 @@ func (r *PullRequestPostgresRepository) Reassign(pullRequestId, oldAuthor, newAu
 		return entity.PullRequest{}, err
 	}
 
-	return newPr, nil
+	pr := entity.PullRequest{
+		Id:           row.Id,
+		Name:         row.Name,
+		AuthorId:     row.AuthorId,
+		Status:       row.Status,
+		ReviewersIds: []string(row.ReviewersIds),
+		CreatedAt:    row.CreatedAt,
+		MergedAt:     row.MergedAt,
+	}
+
+	return pr, nil
+}
+
+func (r PullRequestPostgresRepository) Get(id string) (entity.PullRequest, error) {
+	var row pullRequestRow
+
+	query := `SELECT
+		p.id, p.name, p.author_id, p.status, array_agg(prr.reviewer_id) as reviewers, p.created_at, p.merged_at
+	FROM pullrequest p
+	LEFT JOIN pullrequest_reviewer prr ON p.id = prr.pullrequest_id
+	WHERE id=$1
+	GROUP BY p.id`
+	if err := r.db.Conn.Get(&row, query, id); err != nil {
+		return entity.PullRequest{}, err
+	}
+
+	pr := entity.PullRequest{
+		Id:           row.Id,
+		Name:         row.Name,
+		AuthorId:     row.AuthorId,
+		Status:       row.Status,
+		ReviewersIds: []string(row.ReviewersIds),
+		CreatedAt:    row.CreatedAt,
+		MergedAt:     row.MergedAt,
+	}
+	return pr, nil
 }
