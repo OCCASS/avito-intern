@@ -34,3 +34,10 @@ type PullRequest struct {
 	CreatedAt    string   `json:"-" db:"created_at"`
 	MergedAt     *string  `json:"-" db:"merged_at"`
 }
+
+type SmallPullRequest struct {
+	Id       string `json:"pull_request_id" db:"id"`
+	Name     string `json:"pull_request_name" db:"name"`
+	AuthorId string `json:"author_id" db:"author_id"`
+	Status   Status `json:"status" db:"status"`
+}

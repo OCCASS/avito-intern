@@ -32,24 +32,7 @@ func (s PullRequestServices) Create(dto pullrequest.CreatePullRequestDto) (entit
 		return entity.PullRequest{}, err
 	}
 
-	// TODO: refactor this part. move reviewers assign to another place
-	filteredMembersIds := make([]string, 0, len(team.Members))
-	for i := 0; i < len(team.Members); i++ {
-		member := team.Members[i]
-		if member.Id != dto.AuthorId && member.IsActive {
-			filteredMembersIds = append(filteredMembersIds, member.Id)
-		}
-	}
-
-	reviewers := make([]string, 0, 2)
-	if len(filteredMembersIds) < 2 {
-		reviewers = filteredMembersIds
-	} else {
-		rand.Shuffle(len(filteredMembersIds), func(i, j int) {
-			filteredMembersIds[i], filteredMembersIds[j] = filteredMembersIds[j], filteredMembersIds[i]
-		})
-		reviewers = filteredMembersIds[:2]
-	}
+	reviewers := s.selectReviewers(team.Members, dto.AuthorId, 2)
 
 	pr := entity.PullRequest{
 		Id:           dto.Id,
@@ -66,15 +49,13 @@ func (s PullRequestServices) Merge(dto pullrequest.MergePullRequestDto) (entity.
 	pr, err := s.pullRequestRepository.Get(dto.Id)
 	if err != nil {
 		return entity.PullRequest{}, err
-	} else if pr.Status == entity.StatusMerged {
+	}
+
+	if pr.Status == entity.StatusMerged {
 		return entity.PullRequest{}, ErrPrMerged
 	}
 
-	pr, err = s.pullRequestRepository.Merge(dto.Id)
-	if err != nil {
-		return entity.PullRequest{}, err
-	}
-	return pr, nil
+	return s.pullRequestRepository.Merge(dto.Id)
 }
 
 func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (entity.PullRequest, *string, error) {
@@ -83,10 +64,8 @@ func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (e
 		return entity.PullRequest{}, nil, err
 	}
 
-	if pr.Status == entity.StatusMerged {
-		return entity.PullRequest{}, nil, ErrPrMerged
-	} else if !slices.Contains(pr.ReviewersIds, dto.OldReviewerId) {
-		return entity.PullRequest{}, nil, ErrUserIsNotReviewer
+	if err := s.validateReassignment(pr, dto.OldReviewerId); err != nil {
+		return entity.PullRequest{}, nil, err
 	}
 
 	team, err := s.teamRepository.GetByUser(dto.OldReviewerId)
@@ -94,24 +73,64 @@ func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (e
 		return entity.PullRequest{}, nil, err
 	}
 
-	filteredMembersIds := make([]string, 0, len(team.Members))
-	for i := 0; i < len(team.Members); i++ {
-		member := team.Members[i]
-		if member.Id != pr.AuthorId && !slices.Contains(pr.ReviewersIds, member.Id) && member.IsActive {
-			filteredMembersIds = append(filteredMembersIds, member.Id)
-		}
-	}
-
-	if len(filteredMembersIds) == 0 {
+	candidates := s.getReassignmentCandidates(team.Members, pr)
+	if len(candidates) == 0 {
 		return entity.PullRequest{}, nil, ErrNoCandidatesToReassign
 	}
 
-	newReviewerIndex := rand.IntN(len(filteredMembersIds))
-	newReviewerId := filteredMembersIds[newReviewerIndex]
+	newReviewerId := candidates[rand.IntN(len(candidates))]
 	pr, err = s.pullRequestRepository.Reassign(dto.PullRequestId, dto.OldReviewerId, newReviewerId)
 	if err != nil {
 		return entity.PullRequest{}, nil, err
 	}
-	return pr, &newReviewerId, nil
 
+	return pr, &newReviewerId, nil
+}
+
+func (s PullRequestServices) selectReviewers(members []entity.User, authorId string, maxCount int) []string {
+	validMembers := s.filterValidReviewers(members, authorId, nil)
+
+	if len(validMembers) <= maxCount {
+		return validMembers
+	}
+
+	rand.Shuffle(len(validMembers), func(i, j int) {
+		validMembers[i], validMembers[j] = validMembers[j], validMembers[i]
+	})
+
+	return validMembers[:maxCount]
+}
+
+func (s PullRequestServices) filterValidReviewers(members []entity.User, authorId string, excludeIds []string) []string {
+	valid := make([]string, 0, len(members))
+
+	for _, member := range members {
+		if !member.IsActive || member.Id == authorId {
+			continue
+		}
+
+		if excludeIds != nil && slices.Contains(excludeIds, member.Id) {
+			continue
+		}
+
+		valid = append(valid, member.Id)
+	}
+
+	return valid
+}
+
+func (s PullRequestServices) getReassignmentCandidates(members []entity.User, pr entity.PullRequest) []string {
+	return s.filterValidReviewers(members, pr.AuthorId, pr.ReviewersIds)
+}
+
+func (s PullRequestServices) validateReassignment(pr entity.PullRequest, oldReviewerId string) error {
+	if pr.Status == entity.StatusMerged {
+		return ErrPrMerged
+	}
+
+	if !slices.Contains(pr.ReviewersIds, oldReviewerId) {
+		return ErrUserIsNotReviewer
+	}
+
+	return nil
 }

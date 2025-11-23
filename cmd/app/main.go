@@ -12,10 +12,12 @@ import (
 	prPostgres "github.com/OCCASS/avito-intern/internal/domain/pullrequest/repository/postgres"
 	"github.com/OCCASS/avito-intern/internal/domain/team"
 	teamPostgres "github.com/OCCASS/avito-intern/internal/domain/team/repository/postgres"
+	"github.com/OCCASS/avito-intern/internal/domain/user"
 	userPostgres "github.com/OCCASS/avito-intern/internal/domain/user/repository/postgres"
 
 	prHandlers "github.com/OCCASS/avito-intern/internal/infrastructure/pullrequest"
 	tHandlers "github.com/OCCASS/avito-intern/internal/infrastructure/team"
+	uHandlers "github.com/OCCASS/avito-intern/internal/infrastructure/user"
 )
 
 func main() {
@@ -35,13 +37,15 @@ func main() {
 	// Services
 	pullRequestServices := pullrequest.NewPullRequestServices(pullRequestRepository, teamRepository)
 	teamServices := team.NewTeamServices(teamRepository, userRepository)
+	userServices := user.NewUserServices(userRepository, teamRepository, pullRequestRepository)
 
 	// Handlers
 	pullRequestHandlers := prHandlers.NewPullRequestHandlers(pullRequestServices)
 	teamHandlers := tHandlers.NewTeamHandlers(teamServices)
+	userHandlers := uHandlers.NewUserHandlers(userServices)
 
 	app := fiber.New(*serverCfg)
-	httpServer := server.NewServer(app, pullRequestHandlers, teamHandlers)
+	httpServer := server.NewServer(app, pullRequestHandlers, teamHandlers, userHandlers)
 	httpServer.SetupHandlers()
 	httpServer.MustStart(cfg.Server.Address())
 }

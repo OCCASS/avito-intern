@@ -189,3 +189,26 @@ func (r PullRequestPostgresRepository) Get(id string) (entity.PullRequest, error
 	}
 	return pr, nil
 }
+
+func (r PullRequestPostgresRepository) GetByReviewer(reviewerId string) ([]entity.SmallPullRequest, error) {
+	var rows []pullRequestRow
+
+	query := `SELECT
+		pr.id,
+		pr.name,
+		pr.author_id,
+		pr.status
+	FROM pullrequest_reviewer prr
+	JOIN pullrequest pr
+	ON pr.id = prr.pullrequest_id
+	WHERE reviewer_id=$1`
+	if err := r.db.Conn.Select(&rows, query, reviewerId); err != nil {
+		return []entity.SmallPullRequest{}, err
+	}
+
+	prs := make([]entity.SmallPullRequest, 0, len(rows))
+	for _, u := range rows {
+		prs = append(prs, entity.SmallPullRequest{Id: u.Id, Name: u.Name, AuthorId: u.AuthorId, Status: u.Status})
+	}
+	return prs, nil
+}
