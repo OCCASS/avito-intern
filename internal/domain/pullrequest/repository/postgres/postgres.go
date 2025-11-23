@@ -1,8 +1,12 @@
 package postgres
 
 import (
+	"database/sql"
+
 	"github.com/OCCASS/avito-intern/internal/database"
+	"github.com/OCCASS/avito-intern/internal/domain/pullrequest/repository"
 	"github.com/OCCASS/avito-intern/internal/entity"
+	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
 )
 
@@ -37,13 +41,25 @@ func (r PullRequestPostgresRepository) Create(pr entity.PullRequest) (entity.Pul
 	VALUES ($1, $2, $3, $4, now())
 	RETURNING id, name, author_id, status, created_at`
 	if err := tx.Get(&newPr, queryPr, pr.Id, pr.Name, pr.AuthorId, pr.Status); err != nil {
-		tx.Rollback()
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code {
+			case pgerrcode.UniqueViolation:
+				return entity.PullRequest{}, repository.ErrPrAlreadyExists
+			case pgerrcode.ForeignKeyViolation:
+				return entity.PullRequest{}, repository.ErrAuthorNotFound
+			}
+		}
 		return entity.PullRequest{}, err
 	}
 
 	queryReviewers := `INSERT INTO pullrequest_reviewer(pullrequest_id, reviewer_id) SELECT $1, UNNEST($2::TEXT[])`
 	if _, err := tx.Exec(queryReviewers, pr.Id, pq.Array(pr.ReviewersIds)); err != nil {
-		tx.Rollback()
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code {
+			case pgerrcode.ForeignKeyViolation:
+				return entity.PullRequest{}, repository.ErrTeamNotFound
+			}
+		}
 		return entity.PullRequest{}, err
 	}
 	newPr.ReviewersIds = pr.ReviewersIds
@@ -76,6 +92,9 @@ func (r PullRequestPostgresRepository) Merge(id string) (entity.PullRequest, err
 	WHERE id=$1
 	GROUP BY p.id`
 	if err := tx.Get(&row, queryPr, id); err != nil {
+		if err == sql.ErrNoRows {
+			return entity.PullRequest{}, repository.ErrPrNotFound
+		}
 		return entity.PullRequest{}, err
 	}
 
@@ -107,6 +126,12 @@ func (r PullRequestPostgresRepository) Reassign(pullRequestId, oldReviewer, newR
 
 	queryUpdateReviewer := `UPDATE pullrequest_reviewer SET reviewer_id=$1 WHERE pullrequest_id=$2 AND reviewer_id=$3`
 	if _, err := tx.Exec(queryUpdateReviewer, newReviewer, pullRequestId, oldReviewer); err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code {
+			case pgerrcode.ForeignKeyViolation:
+				return entity.PullRequest{}, repository.ErrReviewerNotFound
+			}
+		}
 		return entity.PullRequest{}, err
 	}
 
@@ -117,6 +142,9 @@ func (r PullRequestPostgresRepository) Reassign(pullRequestId, oldReviewer, newR
 	WHERE id=$1
 	GROUP BY p.id`
 	if err := tx.Get(&row, queryPr, pullRequestId); err != nil {
+		if err == sql.ErrNoRows {
+			return entity.PullRequest{}, repository.ErrPrNotFound
+		}
 		return entity.PullRequest{}, err
 	}
 

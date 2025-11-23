@@ -76,6 +76,12 @@ func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (e
 		return entity.PullRequest{}, nil, err
 	}
 
+	if pr.Status == entity.StatusMerged {
+		return entity.PullRequest{}, nil, ErrPrMerged
+	} else if !slices.Contains(pr.ReviewersIds, dto.OldReviewerId) {
+		return entity.PullRequest{}, nil, ErrUserIsNotReviewer
+	}
+
 	team, err := s.teamRepository.GetByUser(dto.OldReviewerId)
 	if err != nil {
 		return entity.PullRequest{}, nil, err
@@ -89,15 +95,16 @@ func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (e
 		}
 	}
 
-	if len(filteredMembersIds) > 0 {
-		newReviewerIndex := rand.IntN(len(filteredMembersIds))
-		newReviewerId := filteredMembersIds[newReviewerIndex]
-		pr, err := s.pullRequestRepository.Reassign(dto.PullRequestId, dto.OldReviewerId, newReviewerId)
-		if err != nil {
-			return entity.PullRequest{}, nil, err
-		}
-		return pr, &newReviewerId, nil
+	if len(filteredMembersIds) == 0 {
+		return entity.PullRequest{}, nil, ErrNoCandidatesToReassign
 	}
 
-	return pr, nil, nil
+	newReviewerIndex := rand.IntN(len(filteredMembersIds))
+	newReviewerId := filteredMembersIds[newReviewerIndex]
+	pr, err = s.pullRequestRepository.Reassign(dto.PullRequestId, dto.OldReviewerId, newReviewerId)
+	if err != nil {
+		return entity.PullRequest{}, nil, err
+	}
+	return pr, &newReviewerId, nil
+
 }

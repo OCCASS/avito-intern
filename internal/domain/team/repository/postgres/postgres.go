@@ -1,8 +1,12 @@
 package postgres
 
 import (
+	"database/sql"
+
 	"github.com/OCCASS/avito-intern/internal/database"
+	"github.com/OCCASS/avito-intern/internal/domain/team/repository"
 	"github.com/OCCASS/avito-intern/internal/entity"
+	"github.com/jackc/pgerrcode"
 	"github.com/lib/pq"
 )
 
@@ -23,7 +27,12 @@ func (r TeamPostgresRepository) Create(team entity.Team) (entity.Team, error) {
 
 	queryTeam := `INSERT INTO team(name) VALUES ($1)`
 	if _, err := tx.Exec(queryTeam, team.Name); err != nil {
-		tx.Rollback()
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code {
+			case pgerrcode.UniqueViolation:
+				return entity.Team{}, repository.ErrTeamAlreadyExists
+			}
+		}
 		return entity.Team{}, err
 	}
 
@@ -34,7 +43,6 @@ func (r TeamPostgresRepository) Create(team entity.Team) (entity.Team, error) {
 
 	queryTeamMembers := `INSERT INTO team_member(team_name, member_id) SELECT $1, UNNEST($2::TEXT[])`
 	if _, err := tx.Exec(queryTeamMembers, team.Name, pq.Array(membersIds)); err != nil {
-		tx.Rollback()
 		return entity.Team{}, err
 	}
 
@@ -50,6 +58,9 @@ func (r TeamPostgresRepository) Get(name string) (entity.Team, error) {
 
 	queryTeam := `SELECT name FROM team WHERE name=$1`
 	if err := r.db.Conn.Get(&newTeam, queryTeam, name); err != nil {
+		if err == sql.ErrNoRows {
+			return entity.Team{}, repository.ErrTeamNotFound
+		}
 		return entity.Team{}, err
 	}
 
@@ -70,6 +81,9 @@ func (r TeamPostgresRepository) Get(name string) (entity.Team, error) {
 func (r TeamPostgresRepository) GetByUser(userId string) (entity.Team, error) {
 	var teamName string
 	if err := r.db.Conn.Get(&teamName, `SELECT team_name FROM team_member WHERE member_id=$1`, userId); err != nil {
+		if err == sql.ErrNoRows {
+			return entity.Team{}, repository.ErrTeamNotFound
+		}
 		return entity.Team{}, err
 	}
 	return r.Get(teamName)

@@ -1,7 +1,10 @@
 package postgres
 
 import (
+	"database/sql"
+
 	"github.com/OCCASS/avito-intern/internal/database"
+	"github.com/OCCASS/avito-intern/internal/domain/user/repository"
 	"github.com/OCCASS/avito-intern/internal/entity"
 )
 
@@ -17,6 +20,9 @@ func (r UserPostgresRepository) UpdateIsActive(id string, newValue bool) (entity
 	var user entity.User
 	query := `UPDATE "user" SET is_active=$1 WHERE id=$2 RETURNING id, name, is_active`
 	if err := r.db.Conn.Get(&user, query, newValue, id); err != nil {
+		if err == sql.ErrNoRows {
+			return entity.User{}, repository.ErrUserNotFound
+		}
 		return entity.User{}, nil
 	}
 	return user, nil
