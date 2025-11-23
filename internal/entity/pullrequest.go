@@ -31,4 +31,6 @@ type PullRequest struct {
 	AuthorId     string   `json:"author_id" db:"author_id"`
 	Status       Status   `json:"status" db:"status"`
 	ReviewersIds []string `json:"assigned_reviewers" db:"reviewers"`
+	CreatedAt    string   `json:"createdAt" db:"created_at"`
+	MergedAt     string   `json:"meregedAt" db:"merged_at"`
 }

@@ -1,6 +1,6 @@
 package entity
 
 type Team struct {
-	Name    string `json:"team_name"`
+	Name    string `json:"team_name" db:"name"`
 	Members []User `json:"members"`
 }
