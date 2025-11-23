@@ -63,7 +63,14 @@ func (s PullRequestServices) Create(dto pullrequest.CreatePullRequestDto) (entit
 }
 
 func (s PullRequestServices) Merge(dto pullrequest.MergePullRequestDto) (entity.PullRequest, error) {
-	pr, err := s.pullRequestRepository.Merge(dto.Id)
+	pr, err := s.pullRequestRepository.Get(dto.Id)
+	if err != nil {
+		return entity.PullRequest{}, err
+	} else if pr.Status == entity.StatusMerged {
+		return entity.PullRequest{}, ErrPrMerged
+	}
+
+	pr, err = s.pullRequestRepository.Merge(dto.Id)
 	if err != nil {
 		return entity.PullRequest{}, err
 	}

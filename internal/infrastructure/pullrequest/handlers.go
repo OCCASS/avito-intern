@@ -66,6 +66,9 @@ func (h PullRequestHandlers) handleMergeError(c *fiber.Ctx, err error) error {
 	case pullrequestRepository.ErrPrNotFound:
 		return c.Status(fiber.StatusNotFound).JSON(errorDto.NewErrorResponse("NOT_FOUND", err.Error()))
 
+	case pullrequest.ErrPrMerged:
+		return c.Status(fiber.StatusConflict).JSON(errorDto.NewErrorResponse("PR_MERGED", err.Error()))
+
 	default:
 		return c.Status(fiber.StatusInternalServerError).JSON(errorDto.NewErrorResponse("SERVER_ERROR", "an internal error occurred"))
 	}
