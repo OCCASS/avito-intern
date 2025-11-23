@@ -31,6 +31,7 @@ func (s PullRequestServices) Create(dto pullrequest.CreatePullRequestDto) (entit
 		return entity.PullRequest{}, err
 	}
 
+	// TODO: refactor this part. move reviewers assign to another place
 	filteredMembersIds := make([]string, 0, len(team.Members))
 	for i := 0; i < len(team.Members); i++ {
 		member := team.Members[i]
@@ -47,7 +48,6 @@ func (s PullRequestServices) Create(dto pullrequest.CreatePullRequestDto) (entit
 		rand.Shuffle(len(filteredMembersIds), func(i, j int) {
 			filteredMembersIds[i], filteredMembersIds[j] = filteredMembersIds[j], filteredMembersIds[i]
 		})
-
 		reviewers = filteredMembersIds[:2]
 	}
 
