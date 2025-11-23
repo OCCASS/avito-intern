@@ -23,7 +23,9 @@ func (r TeamPostgresRepository) Create(team entity.Team) (entity.Team, error) {
 	if err != nil {
 		return entity.Team{}, err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	queryTeam := `INSERT INTO team(name) VALUES ($1)`
 	if _, err := tx.Exec(queryTeam, team.Name); err != nil {
