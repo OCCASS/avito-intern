@@ -20,7 +20,7 @@ jobs:
 
       - name: Create test file
         run: |
-          echo "database: postgres://testuser:testpass@localhost:5433/testpass" > "./config/test.yml"
+          echo "database: postgres://testuser:testpass@localhost:5433/testdb" > "./config/test.yml"
 
       - name: Run tests
         run: make test DOCKER_ENV_FILE=.env.docker.example
