@@ -16,7 +16,7 @@ type HTTPServerConfig struct {
 	ReadTimeout time.Duration `yaml:"read_timeout" env-default:"5s"`
 	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 	Host        string        `yaml:"host" env-default:"127.0.0.1"`
-	Port        int           `yaml:"port" end-default:"8080"`
+	Port        int           `yaml:"port" env-default:"8080"`
 }
 
 func (s *HTTPServerConfig) Address() string {

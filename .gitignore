@@ -5,3 +5,5 @@ config/*.yml
 .DS_Store
 
 .env.docker
+
+tests.test
