@@ -20,6 +20,7 @@ lint:
 
 load_test:
 	go run $(LOAD_TEST_CMD) -c $(CONFIG_FILE)
+
 test:
 	docker-compose -f docker-compose.test.yml --env-file $(DOCKER_ENV_FILE) up -d test-db
 

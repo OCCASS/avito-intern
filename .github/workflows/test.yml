@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Download Go modules
+        run: go mod download
+
+      - name: Create test file
+        run: |
+          echo "database: postgres://testuser:testpass@localhost:5433/testpass" > "./config/test.yml"
+
+      - name: Run tests
+        run: make test DOCKER_ENV_FILE=.env.docker.example
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose -f docker-compose.test.yml down
