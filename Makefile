@@ -22,13 +22,13 @@ load_test:
 	go run $(LOAD_TEST_CMD) -c $(CONFIG_FILE)
 
 test:
-	docker-compose -f docker-compose.test.yml --env-file $(DOCKER_ENV_FILE) up -d test-db
+	docker compose -f docker-compose.test.yml --env-file $(DOCKER_ENV_FILE) up -d test-db
 
-	@until docker-compose -f docker-compose.test.yml exec test-db pg_isready -U testuser; do \
+	@until docker compose -f docker-compose.test.yml exec test-db pg_isready -U testuser; do \
 		sleep 1; \
 	done
 
 	go test $(TESTS_DIR) -config $(TEST_CONFIG_FILE)
 
-	docker-compose -f docker-compose.test.yml stop test-db
-	docker-compose -f docker-compose.test.yml rm -f test-db
+	docker compose -f docker-compose.test.yml stop test-db
+	docker compose -f docker-compose.test.yml rm -f test-db
