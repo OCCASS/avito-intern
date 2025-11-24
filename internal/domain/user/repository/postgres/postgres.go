@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/OCCASS/avito-intern/internal/application/stats"
 	"github.com/OCCASS/avito-intern/internal/database"
 	"github.com/OCCASS/avito-intern/internal/domain/user/repository"
 	"github.com/OCCASS/avito-intern/internal/entity"
@@ -86,4 +87,20 @@ func (r UserPostgresRepository) GetReview(id string) ([]entity.PullRequest, erro
 		return []entity.PullRequest{}, err
 	}
 	return prs, nil
+}
+
+func (r UserPostgresRepository) GetStats() (stats.UsersStatsDto, error) {
+	var stat stats.UsersStatsDto
+	query := `SELECT
+		COUNT(*) AS count,
+		COUNT(*) FILTER (WHERE is_active IS true) AS active_count,
+		(
+			SELECT COUNT(DISTINCT author_id)
+			FROM pullrequest
+		) AS pr_authors_count
+	FROM "user"`
+	if err := r.db.Conn.Get(&stat, query); err != nil {
+		return stats.UsersStatsDto{}, err
+	}
+	return stat, nil
 }
