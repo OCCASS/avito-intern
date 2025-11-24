@@ -1,5 +1,6 @@
 APP_OUTPUT=main
 APP_CMD=./cmd/app
+LOAD_TEST_CMD=./cmd/load_test
 CONFIG_FILE=./config/local.yml
 
 build:
@@ -13,3 +14,7 @@ prod_run:
 
 lint:
 	golangci-lint run
+
+load_test:
+	go run $(LOAD_TEST_CMD) -c $(CONFIG_FILE)
+
