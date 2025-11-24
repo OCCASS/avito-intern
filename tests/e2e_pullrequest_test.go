@@ -15,7 +15,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestE2E(t *testing.T) {
+func TestE2EPullRequest(t *testing.T) {
+	CleanDb(db)
+
 	// Repositories
 	pullrequestRepository := prPostgres.NewPullRequestPostgresRepository(db)
 	teamRepository := teamPostgres.NewTeamPostgresRepository(db)
