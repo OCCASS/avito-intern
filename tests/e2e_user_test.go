@@ -17,7 +17,9 @@ import (
 )
 
 func TestE2EUser(t *testing.T) {
-	CleanDb(db)
+	if err := CleanDb(db); err != nil {
+		t.Fatal("Clean database error.")
+	}
 
 	// Repositories
 	pullrequestRepository := prPostgres.NewPullRequestPostgresRepository(db)
@@ -48,8 +50,10 @@ func TestE2EUser(t *testing.T) {
 			{Id: "u-8", Name: "Nastya", IsActive: false},
 		},
 	}
-	teamService.Add(createTeam)
-	teamService.Add(createTeam1)
+	_, err := teamService.Add(createTeam)
+	require.NoError(t, err)
+	_, err = teamService.Add(createTeam1)
+	require.NoError(t, err)
 
 	// Create pull request
 	createDto := prDto.CreatePullRequestDto{
@@ -62,8 +66,10 @@ func TestE2EUser(t *testing.T) {
 		Name:     "Fix",
 		AuthorId: "u-5",
 	}
-	pullrequestService.Create(createDto)
-	pullrequestService.Create(createDto1)
+	_, err = pullrequestService.Create(createDto)
+	require.NoError(t, err)
+	_, err = pullrequestService.Create(createDto1)
+	require.NoError(t, err)
 
 	// Get pull request where review
 	prs, err := userService.GetUserPullRequestsWhereReview("u-2")

@@ -16,7 +16,9 @@ import (
 )
 
 func TestE2EPullRequest(t *testing.T) {
-	CleanDb(db)
+	if err := CleanDb(db); err != nil {
+		t.Fatal("Clean database error.")
+	}
 
 	// Repositories
 	pullrequestRepository := prPostgres.NewPullRequestPostgresRepository(db)

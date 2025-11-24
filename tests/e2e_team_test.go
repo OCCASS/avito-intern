@@ -13,7 +13,9 @@ import (
 )
 
 func TestE2ETeam(t *testing.T) {
-	CleanDb(db)
+	if err := CleanDb(db); err != nil {
+		t.Fatal("Clean database error.")
+	}
 
 	// Repositories
 	teamRepository := teamPostgres.NewTeamPostgresRepository(db)
