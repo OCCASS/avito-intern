@@ -7,6 +7,7 @@ import (
 	"os/signal"
 
 	"github.com/OCCASS/avito-intern/internal/infrastructure/pullrequest"
+	"github.com/OCCASS/avito-intern/internal/infrastructure/stats"
 	"github.com/OCCASS/avito-intern/internal/infrastructure/team"
 	"github.com/OCCASS/avito-intern/internal/infrastructure/user"
 	"github.com/gofiber/fiber/v2"
@@ -17,6 +18,7 @@ type Server struct {
 	pullRequestHandlers *pullrequest.PullRequestHandlers
 	teamHandlers        *team.TeamHandlers
 	userHandlers        *user.UserHandlers
+	statsHandlers       *stats.StatsHandlers
 }
 
 func NewServer(
@@ -24,12 +26,14 @@ func NewServer(
 	prh *pullrequest.PullRequestHandlers,
 	th *team.TeamHandlers,
 	uh *user.UserHandlers,
+	sh *stats.StatsHandlers,
 ) *Server {
 	return &Server{
 		app:                 app,
 		pullRequestHandlers: prh,
 		teamHandlers:        th,
 		userHandlers:        uh,
+		statsHandlers:       sh,
 	}
 }
 
@@ -46,6 +50,9 @@ func (s Server) SetupHandlers() {
 	user := s.app.Group("/users")
 	user.Post("/setIsActive", s.userHandlers.SetIsActive)
 	user.Get("/getReview", s.userHandlers.GetReview)
+
+	stats := s.app.Group("/stats")
+	stats.Get("/users", s.statsHandlers.Users)
 }
 
 func (s *Server) MustStart(address string) {
