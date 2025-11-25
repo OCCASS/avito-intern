@@ -46,6 +46,7 @@ func (s Server) SetupHandlers() {
 	team := s.app.Group("/team")
 	team.Post("/add", s.teamHandlers.Add)
 	team.Get("/get", s.teamHandlers.Get)
+	team.Post("/deactivateMembers", s.teamHandlers.DeactivateMembers)
 
 	user := s.app.Group("/users")
 	user.Post("/setIsActive", s.userHandlers.SetIsActive)
