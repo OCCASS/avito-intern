@@ -7,6 +7,7 @@ import (
 	"github.com/OCCASS/avito-intern/internal/database"
 	"github.com/OCCASS/avito-intern/internal/server"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 
 	"github.com/OCCASS/avito-intern/internal/domain/pullrequest"
 	prPostgres "github.com/OCCASS/avito-intern/internal/domain/pullrequest/repository/postgres"
@@ -49,6 +50,7 @@ func main() {
 	statsHandlers := sHandlers.NewStatsHandlers(statsServices)
 
 	app := fiber.New(*serverCfg)
+	app.Use(logger.New())
 	httpServer := server.NewServer(app, pullRequestHandlers, teamHandlers, userHandlers, statsHandlers)
 	httpServer.SetupHandlers()
 	httpServer.MustStart(cfg.Server.Address())
