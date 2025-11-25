@@ -78,7 +78,14 @@ func (h TeamHandlers) DeactivateMembers(c *fiber.Ctx) error {
 
 	team, err := h.services.DeactivateMembers(*payload)
 	if err != nil {
-		return err
+		return h.handleDeactivateMembersError(c, err)
 	}
 	return c.JSON(team)
+}
+
+func (h TeamHandlers) handleDeactivateMembersError(c *fiber.Ctx, err error) error {
+	switch err {
+	default:
+		return c.Status(fiber.StatusInternalServerError).JSON(errorDto.NewErrorResponse("SERVER_ERROR", "an internal error occurred"))
+	}
 }

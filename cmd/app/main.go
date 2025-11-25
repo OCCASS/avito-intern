@@ -38,9 +38,9 @@ func main() {
 
 	// Services
 	pullRequestServices := pullrequest.NewPullRequestServices(pullRequestRepository, teamRepository)
-	teamServices := team.NewTeamServices(teamRepository, userRepository)
 	userServices := user.NewUserServices(userRepository, teamRepository, pullRequestRepository)
 	statsServices := stats.NewStatsServices(userRepository)
+	teamServices := team.NewTeamServices(teamRepository, userRepository, pullRequestServices, userServices)
 
 	// Handlers
 	pullRequestHandlers := prHandlers.NewPullRequestHandlers(pullRequestServices)

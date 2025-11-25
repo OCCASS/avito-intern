@@ -91,9 +91,18 @@ func (r TeamPostgresRepository) GetByUser(userId string) (entity.Team, error) {
 	return r.Get(teamName)
 }
 
-func (r TeamPostgresRepository) DeactivateMembers(name string) (entity.Team, error) {
-	query := `UPDATE "user" u SET is_active=false FROM team_member tm WHERE tm.member_id=u.id AND tm.team_name=$1 AND u.is_active=true`
-	if _, err := r.db.Conn.Exec(query, name); err != nil {
+func (r TeamPostgresRepository) DeactivateMembers(name string, members []string) (entity.Team, error) {
+	query := `UPDATE "user" u
+	SET
+		is_active=false
+	FROM
+		team_member tm
+	WHERE
+		tm.member_id=u.id
+		AND tm.team_name=$1
+		AND u.is_active=true
+		AND u.id=ANY($2)`
+	if _, err := r.db.Conn.Exec(query, name, pq.Array(members)); err != nil {
 		return entity.Team{}, err
 	}
 	return r.Get(name)

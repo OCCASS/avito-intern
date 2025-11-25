@@ -15,6 +15,7 @@ type MergePullRequestDto struct {
 type ReassignPullRequestDto struct {
 	PullRequestId string `json:"pull_request_id"`
 	OldReviewerId string `json:"old_reviewer_id"`
+	AllowRemove   bool   `json:"-" default:"false"`
 }
 
 type CreatePullRequestResponse struct {
