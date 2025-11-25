@@ -1,4 +1,4 @@
-database: postgres://db:password@host:port/dbname
+database: postgres://dbname:dbpass@localhost:5432/dbname
 server:
   host: "127.0.0.1" # default
   port: 8080        # default
