@@ -22,7 +22,7 @@ Throughput: 100.03 requests/sec
 > Все названия в `example` кофигах подобраны друг к другу так, чтобы все запустилось сразу из коробки
 
 ```bash
-cp ./config/config.yml.example ./config/docker.yml
+cp ./config/docker.yml.example ./config/docker.yml
 cp .env.docker.example .env.docker
 docker-compose --env-file .env.docker up
 ```

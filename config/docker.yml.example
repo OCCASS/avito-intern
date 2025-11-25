@@ -1,0 +1,4 @@
+database: postgres://dbname:dbpass@db:5432/dbname
+server:
+  host: "127.0.0.1"
+  port: 8080
