@@ -90,10 +90,12 @@ func (r PullRequestPostgresRepository) Merge(id string) (entity.PullRequest, err
 	}
 
 	queryPr := `SELECT
-		p.id, p.name, p.author_id, p.status, array_agg(prr.reviewer_id) as reviewers, p.created_at, p.merged_at
+		p.id, p.name, p.author_id, p.status,
+		COALESCE(ARRAY_AGG(prr.reviewer_id) FILTER (WHERE prr.reviewer_id IS NOT NULL), '{}') as reviewers,
+		p.created_at, p.merged_at
 	FROM pullrequest p
 	LEFT JOIN pullrequest_reviewer prr ON p.id = prr.pullrequest_id
-	WHERE id=$1
+	WHERE p.id=$1
 	GROUP BY p.id`
 	if err := tx.Get(&row, queryPr, id); err != nil {
 		if err == sql.ErrNoRows {
@@ -142,12 +144,68 @@ func (r PullRequestPostgresRepository) Reassign(pullRequestId, oldReviewer, newR
 	}
 
 	queryPr := `SELECT
-		p.id, p.name, p.author_id, p.status, array_agg(prr.reviewer_id) as reviewers, p.created_at, p.merged_at
+		p.id, p.name, p.author_id, p.status,
+		COALESCE(ARRAY_AGG(prr.reviewer_id) FILTER (WHERE prr.reviewer_id IS NOT NULL), '{}') as reviewers,
+		p.created_at, p.merged_at
 	FROM pullrequest p
 	LEFT JOIN pullrequest_reviewer prr ON p.id = prr.pullrequest_id
-	WHERE id=$1
+	WHERE p.id=$1
 	GROUP BY p.id`
 	if err := tx.Get(&row, queryPr, pullRequestId); err != nil {
+		if err == sql.ErrNoRows {
+			return entity.PullRequest{}, repository.ErrPrNotFound
+		}
+		return entity.PullRequest{}, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return entity.PullRequest{}, err
+	}
+
+	pr := entity.PullRequest{
+		Id:           row.Id,
+		Name:         row.Name,
+		AuthorId:     row.AuthorId,
+		Status:       row.Status,
+		ReviewersIds: []string(row.ReviewersIds),
+		CreatedAt:    row.CreatedAt,
+		MergedAt:     row.MergedAt,
+	}
+
+	return pr, nil
+}
+
+func (r PullRequestPostgresRepository) RemoveReviewer(pullrequestId, reviewerId string) (entity.PullRequest, error) {
+	var row pullRequestRow
+
+	tx, err := r.db.Conn.Beginx()
+	if err != nil {
+		return entity.PullRequest{}, err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	queryUpdateReviewer := `DELETE FROM pullrequest_reviewer WHERE reviewer_id=$1 AND pullrequest_id=$2`
+	if _, err := tx.Exec(queryUpdateReviewer, reviewerId, pullrequestId); err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			switch pqErr.Code {
+			case pgerrcode.ForeignKeyViolation:
+				return entity.PullRequest{}, repository.ErrReviewerNotFound
+			}
+		}
+		return entity.PullRequest{}, err
+	}
+
+	queryPr := `SELECT
+		p.id, p.name, p.author_id, p.status,
+		COALESCE(ARRAY_AGG(prr.reviewer_id) FILTER (WHERE prr.reviewer_id IS NOT NULL), '{}') as reviewers,
+		p.created_at, p.merged_at
+	FROM pullrequest p
+	LEFT JOIN pullrequest_reviewer prr ON p.id = prr.pullrequest_id
+	WHERE p.id=$1
+	GROUP BY p.id`
+	if err := tx.Get(&row, queryPr, pullrequestId); err != nil {
 		if err == sql.ErrNoRows {
 			return entity.PullRequest{}, repository.ErrPrNotFound
 		}
@@ -175,10 +233,10 @@ func (r PullRequestPostgresRepository) Get(id string) (entity.PullRequest, error
 	var row pullRequestRow
 
 	query := `SELECT
-		p.id, p.name, p.author_id, p.status, array_agg(prr.reviewer_id) as reviewers, p.created_at, p.merged_at
+		p.id, p.name, p.author_id, p.status, COALESCE(ARRAY_AGG(prr.reviewer_id) FILTER (WHERE prr.reviewer_id IS NOT NULL), '{}') as reviewers, p.created_at, p.merged_at
 	FROM pullrequest p
 	LEFT JOIN pullrequest_reviewer prr ON p.id = prr.pullrequest_id
-	WHERE id=$1
+	WHERE p.id=$1
 	GROUP BY p.id`
 	if err := r.db.Conn.Get(&row, query, id); err != nil {
 		return entity.PullRequest{}, err

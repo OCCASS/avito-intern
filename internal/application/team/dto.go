@@ -16,5 +16,6 @@ type GetTeamQuery struct {
 }
 
 type DeactivateMembersDto struct {
-	Name string `json:"team_name"`
+	Name       string   `json:"team_name"`
+	MembersIds []string `json:"members"`
 }

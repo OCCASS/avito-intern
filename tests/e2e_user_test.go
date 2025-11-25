@@ -27,9 +27,9 @@ func TestE2EUser(t *testing.T) {
 	userRepository := userPostgres.NewUserPostgresRepository(db)
 
 	// Services
-	teamService := team.NewTeamServices(teamRepository, userRepository)
 	userService := user.NewUserServices(userRepository, teamRepository, pullrequestRepository)
 	pullrequestService := pullrequest.NewPullRequestServices(pullrequestRepository, teamRepository)
+	teamService := team.NewTeamServices(teamRepository, userRepository, pullrequestService, userService)
 
 	// Create (create users)
 	createTeam := tDto.CreateTeamDto{

@@ -9,6 +9,7 @@ import (
 	prPostgres "github.com/OCCASS/avito-intern/internal/domain/pullrequest/repository/postgres"
 	"github.com/OCCASS/avito-intern/internal/domain/team"
 	teamPostgres "github.com/OCCASS/avito-intern/internal/domain/team/repository/postgres"
+	"github.com/OCCASS/avito-intern/internal/domain/user"
 	userPostgres "github.com/OCCASS/avito-intern/internal/domain/user/repository/postgres"
 	"github.com/OCCASS/avito-intern/internal/entity"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,8 @@ func TestE2EPullRequest(t *testing.T) {
 
 	// Services
 	pullrequestService := pullrequest.NewPullRequestServices(pullrequestRepository, teamRepository)
-	teamService := team.NewTeamServices(teamRepository, userRepository)
+	userService := user.NewUserServices(userRepository, teamRepository, pullrequestRepository)
+	teamService := team.NewTeamServices(teamRepository, userRepository, pullrequestService, userService)
 
 	// Create team
 	createTeam := tDto.CreateTeamDto{

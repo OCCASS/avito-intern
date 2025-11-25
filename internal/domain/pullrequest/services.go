@@ -3,6 +3,7 @@ package pullrequest
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"fmt"
 	"slices"
 	"sort"
 
@@ -33,7 +34,7 @@ func (s PullRequestServices) Create(dto pullrequest.CreatePullRequestDto) (entit
 		return entity.PullRequest{}, err
 	}
 
-	reviewers := s.selectReviewers(team.Members, dto.AuthorId, dto.Id, 2)
+	reviewers := s.selectReviewers(team.Members, dto.AuthorId, dto.Id)
 
 	pr := entity.PullRequest{
 		Id:           dto.Id,
@@ -59,6 +60,14 @@ func (s PullRequestServices) Merge(dto pullrequest.MergePullRequestDto) (entity.
 	return s.pullRequestRepository.Merge(dto.Id)
 }
 
+func (s PullRequestServices) Get(id string) (entity.PullRequest, error) {
+	pr, err := s.pullRequestRepository.Get(id)
+	if err != nil {
+		return entity.PullRequest{}, err
+	}
+	return pr, nil
+}
+
 func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (entity.PullRequest, *string, error) {
 	pr, err := s.pullRequestRepository.Get(dto.PullRequestId)
 	if err != nil {
@@ -75,24 +84,32 @@ func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (e
 	}
 
 	candidates := s.getReassignmentCandidates(team.Members, pr)
-	newReviewerId, err := s.selectReviewer(dto.OldReviewerId, candidates)
-	if err != nil {
-		return entity.PullRequest{}, nil, err
-	}
+	if len(candidates) == 0 && dto.AllowRemove {
+		pr, err := s.pullRequestRepository.RemoveReviewer(dto.PullRequestId, dto.OldReviewerId)
+		fmt.Println(dto)
+		if err != nil {
+			fmt.Println(err)
+			return entity.PullRequest{}, nil, err
+		}
+		return pr, nil, nil
+	} else if len(candidates) == 0 && !dto.AllowRemove {
+		return entity.PullRequest{}, nil, ErrNoCandidatesToReassign
+	} else {
+		newReviewerId, err := s.selectReviewer(dto.OldReviewerId, candidates)
+		if err != nil {
+			return entity.PullRequest{}, nil, err
+		}
 
-	pr, err = s.pullRequestRepository.Reassign(dto.PullRequestId, dto.OldReviewerId, newReviewerId)
-	if err != nil {
-		return entity.PullRequest{}, nil, err
-	}
+		pr, err = s.pullRequestRepository.Reassign(dto.PullRequestId, dto.OldReviewerId, newReviewerId)
+		if err != nil {
+			return entity.PullRequest{}, nil, err
+		}
 
-	return pr, &newReviewerId, nil
+		return pr, &newReviewerId, nil
+	}
 }
 
 func (s PullRequestServices) selectReviewer(id string, canditates []string) (string, error) {
-	if len(canditates) == 0 {
-		return "", ErrNoCandidatesToReassign
-	}
-
 	sorted := s.deterministicSort(id, canditates)
 
 	h := sha256.Sum256([]byte(id))
@@ -102,15 +119,15 @@ func (s PullRequestServices) selectReviewer(id string, canditates []string) (str
 	return sorted[index], nil
 }
 
-func (s PullRequestServices) selectReviewers(members []entity.User, authorId, oldReviewerId string, maxCount int) []string {
+func (s PullRequestServices) selectReviewers(members []entity.User, authorId, oldReviewerId string) []string {
 	validMembers := s.filterValidReviewers(members, authorId, nil)
 
-	if len(validMembers) <= maxCount {
+	if len(validMembers) <= 2 {
 		return validMembers
 	}
 
 	validMembers = s.deterministicSort(oldReviewerId, validMembers)
-	return validMembers[:maxCount]
+	return validMembers[:2]
 }
 
 func (s PullRequestServices) deterministicSort(id string, replacements []string) []string {
