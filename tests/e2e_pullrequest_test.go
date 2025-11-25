@@ -71,6 +71,7 @@ func TestE2EPullRequest(t *testing.T) {
 	assert.Equal(t, entity.StatusMerged, pr.Status)
 
 	// Merge again
-	_, err = pullrequestService.Merge(mergeDto)
-	require.Error(t, err)
+	pr1, err := pullrequestService.Merge(mergeDto)
+	require.NoError(t, err)
+	assert.Equal(t, pr, pr1)
 }
