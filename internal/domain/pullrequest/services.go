@@ -1,14 +1,15 @@
 package pullrequest
 
 import (
+	"crypto/sha256"
+	"encoding/binary"
 	"slices"
+	"sort"
 
 	"github.com/OCCASS/avito-intern/internal/application/pullrequest"
 	prRepository "github.com/OCCASS/avito-intern/internal/domain/pullrequest/repository"
 	teamRepository "github.com/OCCASS/avito-intern/internal/domain/team/repository"
 	"github.com/OCCASS/avito-intern/internal/entity"
-
-	"math/rand/v2"
 )
 
 type PullRequestServices struct {
@@ -32,7 +33,7 @@ func (s PullRequestServices) Create(dto pullrequest.CreatePullRequestDto) (entit
 		return entity.PullRequest{}, err
 	}
 
-	reviewers := s.selectReviewers(team.Members, dto.AuthorId, 2)
+	reviewers := s.selectReviewers(team.Members, dto.AuthorId, dto.Id, 2)
 
 	pr := entity.PullRequest{
 		Id:           dto.Id,
@@ -74,11 +75,11 @@ func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (e
 	}
 
 	candidates := s.getReassignmentCandidates(team.Members, pr)
-	if len(candidates) == 0 {
-		return entity.PullRequest{}, nil, ErrNoCandidatesToReassign
+	newReviewerId, err := s.selectReviewer(dto.OldReviewerId, candidates)
+	if err != nil {
+		return entity.PullRequest{}, nil, err
 	}
 
-	newReviewerId := candidates[rand.IntN(len(candidates))]
 	pr, err = s.pullRequestRepository.Reassign(dto.PullRequestId, dto.OldReviewerId, newReviewerId)
 	if err != nil {
 		return entity.PullRequest{}, nil, err
@@ -87,18 +88,45 @@ func (s PullRequestServices) Reassign(dto pullrequest.ReassignPullRequestDto) (e
 	return pr, &newReviewerId, nil
 }
 
-func (s PullRequestServices) selectReviewers(members []entity.User, authorId string, maxCount int) []string {
+func (s PullRequestServices) selectReviewer(id string, canditates []string) (string, error) {
+	if len(canditates) == 0 {
+		return "", ErrNoCandidatesToReassign
+	}
+
+	sorted := s.deterministicSort(id, canditates)
+
+	h := sha256.Sum256([]byte(id))
+	num := binary.BigEndian.Uint64(h[:8])
+	index := num % uint64(len(sorted))
+
+	return sorted[index], nil
+}
+
+func (s PullRequestServices) selectReviewers(members []entity.User, authorId, oldReviewerId string, maxCount int) []string {
 	validMembers := s.filterValidReviewers(members, authorId, nil)
 
 	if len(validMembers) <= maxCount {
 		return validMembers
 	}
 
-	rand.Shuffle(len(validMembers), func(i, j int) {
-		validMembers[i], validMembers[j] = validMembers[j], validMembers[i]
+	validMembers = s.deterministicSort(oldReviewerId, validMembers)
+	return validMembers[:maxCount]
+}
+
+func (s PullRequestServices) deterministicSort(id string, replacements []string) []string {
+	sorted := make([]string, len(replacements))
+	copy(sorted, replacements)
+
+	sort.Slice(sorted, func(i, j int) bool {
+		return s.hashPair(id, sorted[i]) < s.hashPair(id, sorted[j])
 	})
 
-	return validMembers[:maxCount]
+	return sorted
+}
+
+func (s PullRequestServices) hashPair(id, value string) uint64 {
+	h := sha256.Sum256([]byte(id + ":" + value))
+	return binary.BigEndian.Uint64(h[:8])
 }
 
 func (s PullRequestServices) filterValidReviewers(members []entity.User, authorId string, excludeIds []string) []string {
