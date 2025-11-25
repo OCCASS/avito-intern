@@ -106,7 +106,8 @@ func TestE2EPullRequest(t *testing.T) {
 		OldReviewerId: pr.ReviewersIds[0],
 	}
 	newPr, newReviewerId, err := pullrequestService.Reassign(reassignDto)
-	require.Error(t, err)
+	require.NoError(t, err)
 	assert.NotContains(t, newPr.ReviewersIds, pr.ReviewersIds[0])
 	assert.NotContains(t, newPr.ReviewersIds, newPr.AuthorId)
+	assert.Contains(t, newPr.ReviewersIds, *newReviewerId)
 }
