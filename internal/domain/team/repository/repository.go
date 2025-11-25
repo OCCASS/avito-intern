@@ -6,4 +6,5 @@ type TeamRepository interface {
 	Create(entity.Team) (entity.Team, error)
 	Get(string) (entity.Team, error)
 	GetByUser(string) (entity.Team, error)
+	DeactivateMembers(string) (entity.Team, error)
 }

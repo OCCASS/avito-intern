@@ -14,3 +14,7 @@ type CreateTeamResponse struct {
 type GetTeamQuery struct {
 	Name string `query:"team_name"`
 }
+
+type DeactivateMembersDto struct {
+	Name string `json:"team_name"`
+}

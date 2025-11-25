@@ -68,3 +68,17 @@ func (h TeamHandlers) handleGetError(c *fiber.Ctx, err error) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(errorDto.NewErrorResponse("SERVER_ERROR", "an internal error occurred"))
 	}
 }
+
+func (h TeamHandlers) DeactivateMembers(c *fiber.Ctx) error {
+	payload := new(teamDto.DeactivateMembersDto)
+
+	if err := c.BodyParser(&payload); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(errorDto.NewErrorResponse("INVALID_BODY", "request body is invalid"))
+	}
+
+	team, err := h.services.DeactivateMembers(*payload)
+	if err != nil {
+		return err
+	}
+	return c.JSON(team)
+}

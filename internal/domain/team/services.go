@@ -45,3 +45,11 @@ func (s TeamServices) Get(name string) (entity.Team, error) {
 	}
 	return team, nil
 }
+
+func (s TeamServices) DeactivateMembers(dto team.DeactivateMembersDto) (entity.Team, error) {
+	team, err := s.teamRepository.DeactivateMembers(dto.Name)
+	if err != nil {
+		return entity.Team{}, err
+	}
+	return team, nil
+}

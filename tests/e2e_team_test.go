@@ -42,4 +42,16 @@ func TestE2ETeam(t *testing.T) {
 	// Create again
 	team, err = teamService.Add(createTeam)
 	require.Error(t, err)
+
+	// Deactvate all team members
+	deactivateDto := tDto.DeactivateMembersDto{
+		Name: "backend",
+	}
+	team, err = teamService.DeactivateMembers(deactivateDto)
+	require.NoError(t, err)
+	var any = false
+	for _, member := range team.Members {
+		any = any || member.IsActive
+	}
+	assert.False(t, any)
 }
