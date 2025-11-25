@@ -85,7 +85,7 @@ func (r PullRequestPostgresRepository) Merge(id string) (entity.PullRequest, err
 	}()
 
 	queryMerge := `UPDATE pullrequest SET status=$1, merged_at=now() WHERE id=$2`
-	if _, err := r.db.Conn.Exec(queryMerge, entity.StatusMerged, id); err != nil {
+	if _, err := tx.Exec(queryMerge, entity.StatusMerged, id); err != nil {
 		return entity.PullRequest{}, err
 	}
 
