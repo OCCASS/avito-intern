@@ -74,4 +74,39 @@ func TestE2EPullRequest(t *testing.T) {
 	pr1, err := pullrequestService.Merge(mergeDto)
 	require.NoError(t, err)
 	assert.Equal(t, pr, pr1)
+
+	// Create another team
+	createTeam = tDto.CreateTeamDto{
+		Name: "frontend",
+		Members: []entity.User{
+			{Id: "u-5", Name: "Ivan", IsActive: true},
+			{Id: "u-6", Name: "Vanya", IsActive: true},
+			{Id: "u-7", Name: "Lena", IsActive: true},
+			{Id: "u-8", Name: "Nastya", IsActive: true},
+			{Id: "u-9", Name: "Nastya", IsActive: true},
+			{Id: "u-10", Name: "Nastya", IsActive: true},
+		},
+	}
+	_, err = teamService.Add(createTeam)
+	require.NoError(t, err)
+
+	// Create pull request
+	createDto = prDto.CreatePullRequestDto{
+		Id:       "pr-1002",
+		Name:     "Fix_2",
+		AuthorId: "u-5",
+	}
+	pr, err = pullrequestService.Create(createDto)
+	require.NoError(t, err)
+	assert.Equal(t, entity.StatusOpen, pr.Status)
+
+	// Reassign
+	reassignDto = prDto.ReassignPullRequestDto{
+		PullRequestId: "pr-1002",
+		OldReviewerId: pr.ReviewersIds[0],
+	}
+	newPr, newReviewerId, err := pullrequestService.Reassign(reassignDto)
+	require.Error(t, err)
+	assert.NotContains(t, newPr.ReviewersIds, pr.ReviewersIds[0])
+	assert.NotContains(t, newPr.ReviewersIds, newPr.AuthorId)
 }
